@@ -1,0 +1,23 @@
+# CleanCity / Smart Waste — run from repo root: pip install -r requirements.txt
+# Windows + TensorFlow: install MSVC++ x64 redist if import fails (msvcp140_1.dll):
+#   winget install Microsoft.VCRedist.2015+.x64
+# API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+
+# Dashboard & AI stack
+streamlit>=1.28.0
+tensorflow>=2.15.0
+numpy>=1.24.0
+pillow>=10.0.0
+pandas>=2.0.0
+folium>=0.15.0
+streamlit-folium>=0.18.0
+
+# Dev / smoke tests
+requests>=2.31.0
+
+# Optional MQTT → REST bridge (python -m iot_gateway.mqtt_bridge)
+paho-mqtt>=1.6.0

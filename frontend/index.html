@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CleanCity AI | Smart Waste Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="sb-icon"><i class="fa-solid fa-recycle"></i></div>
+    <div class="sb-text">
+      <span class="sb-name">CleanCity AI</span>
+      <span class="sb-ver">v2.5.0-PRO</span>
+    </div>
+  </div>
+
+  <nav class="sb-nav">
+    <a class="sb-link active" data-page="overview" href="#">
+      <i class="fa-solid fa-house-chimney"></i><span>Overview</span>
+    </a>
+    <a class="sb-link" data-page="map" href="#">
+      <i class="fa-solid fa-earth-asia"></i><span>City Map</span>
+    </a>
+    <a class="sb-link" data-page="telemetry" href="#">
+      <i class="fa-solid fa-signal"></i><span>Telemetry</span>
+    </a>
+    <a class="sb-link" data-page="vision" href="#">
+      <i class="fa-solid fa-eye"></i><span>AI Vision</span>
+    </a>
+    <a class="sb-link" data-page="community" href="#">
+      <i class="fa-solid fa-bullhorn"></i><span>Community</span>
+    </a>
+  </nav>
+
+  <div class="sb-status">
+    <div class="sb-stat-row"><span class="sb-dot green"></span><span>IoT Grid</span><span class="sb-stat-val">Active</span></div>
+    <div class="sb-stat-row"><span class="sb-dot green"></span><span>Network</span><span class="sb-stat-val">Stable</span></div>
+    <div class="sb-stat-row"><span class="sb-dot" id="ai-dot"></span><span>AI Engine</span><span class="sb-stat-val" id="ai-status">Loading…</span></div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════ MAIN ══════════════════════════ -->
+<div class="main-wrap">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <button class="topbar-hamburger" id="btn-toggle-sidebar"><i class="fa-solid fa-bars"></i></button>
+    <div class="topbar-title" id="page-title">Overview</div>
+    <div class="topbar-actions">
+      <div class="toggle-wrap">
+        <label class="switch">
+          <input type="checkbox" id="auto-refresh-toggle">
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Auto (5s)</span>
+      </div>
+      <button class="btn btn-ghost" id="btn-refresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
+    </div>
+  </header>
+
+  <!-- Alert Banner (shown globally when critical bins exist) -->
+  <div class="alert-banner hidden" id="alert-banner">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span id="alert-banner-text"></span>
+  </div>
+
+  <!-- ════════ PAGE: OVERVIEW ════════ -->
+  <section class="page active" id="page-overview">
+    <div class="page-header">
+      <h2 class="page-heading">Dashboard Overview</h2>
+      <p class="page-sub">Real-time summary of all waste management nodes across the city.</p>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap purple"><i class="fa-solid fa-trash-can"></i></div>
+        <div class="kpi-data"><small>Bins in Service</small><h3 id="kpi-total">—</h3></div>
+        <div class="kpi-trend up"><i class="fa-solid fa-arrow-trend-up"></i></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="kpi-data"><small>Priority ≥80%</small><h3 id="kpi-priority">—</h3></div>
+        <div class="kpi-trend down"><i class="fa-solid fa-arrow-trend-down"></i></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap orange"><i class="fa-solid fa-chart-simple"></i></div>
+        <div class="kpi-data"><small>Avg Fill Level</small><h3 id="kpi-mean">—</h3></div>
+        <div class="kpi-trend neutral"><i class="fa-solid fa-minus"></i></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap green"><i class="fa-solid fa-clock"></i></div>
+        <div class="kpi-data"><small>Last Telemetry</small><h3 id="kpi-time">—</h3></div>
+        <div class="kpi-trend up"><i class="fa-solid fa-wifi"></i></div>
+      </div>
+    </div>
+
+    <!-- Overview Bento -->
+    <div class="bento-2col">
+      <!-- Priority alerts card -->
+      <div class="card" id="alerts-card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-fire"></i> Active Alerts</span>
+          <span class="badge-count" id="alert-badge">0</span>
+        </div>
+        <div class="card-body" id="alerts-body">
+          <div class="empty-state"><i class="fa-solid fa-circle-check"></i><p>All bins within safe thresholds</p></div>
+        </div>
+      </div>
+
+      <!-- Quick Route Summary -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-route"></i> Optimal Collection Route</span>
+        </div>
+        <div class="card-body">
+          <div class="route-metrics-mini">
+            <div class="rmm-item"><span class="rmm-label">Distance</span><span class="rmm-val" id="ov-dist">—</span></div>
+            <div class="rmm-item"><span class="rmm-label">Est. Time</span><span class="rmm-val" id="ov-time">—</span></div>
+            <div class="rmm-item"><span class="rmm-label">CO₂ Saved</span><span class="rmm-val green" id="ov-co2">—</span></div>
+            <div class="rmm-item"><span class="rmm-label">Fuel Saved</span><span class="rmm-val green" id="ov-fuel">—</span></div>
+          </div>
+          <div class="route-mini-list" id="ov-route-list"><div class="empty-route">Computing route…</div></div>
+          <button class="btn btn-primary btn-block mt-12" id="btn-dispatch-ov">
+            <i class="fa-solid fa-rocket"></i> Dispatch Fleet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="info-strip">
+      <i class="fa-solid fa-circle-info"></i>
+      <div>Register bins via <code>POST /bins</code> · Devices use <code>POST /iot/update</code> · API docs at <a href="/docs" target="_blank"><code>/docs</code></a></div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: CITY MAP ════════ -->
+  <section class="page" id="page-map">
+    <div class="page-header">
+      <h2 class="page-heading">Live City Collection Topology</h2>
+      <p class="page-sub">Interactive map of all bin nodes with real-time fill levels and optimal routing overlay.</p>
+    </div>
+    <div class="map-layout">
+      <div class="card map-card">
+        <div id="map"></div>
+      </div>
+      <div class="card dispatch-card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-brain"></i> AI Dispatch Intel</span></div>
+        <div class="card-body">
+          <div class="route-4grid">
+            <div class="r4-item"><small>Distance</small><b id="r-dist">—</b></div>
+            <div class="r4-item"><small>Time</small><b id="r-time">—</b></div>
+            <div class="r4-item"><small>CO₂ Saved</small><b class="green" id="r-co2">—</b></div>
+            <div class="r4-item"><small>Fuel Saved</small><b class="green" id="r-fuel">—</b></div>
+          </div>
+          <p class="route-heading">Collection Sequence</p>
+          <div class="route-seq" id="map-route-list"><div class="empty-route">No priority bins.</div></div>
+          <button class="btn btn-primary btn-block mt-12" id="btn-dispatch-map">
+            <i class="fa-solid fa-truck"></i> Dispatch &amp; Empty Bins
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: TELEMETRY ════════ -->
+  <section class="page" id="page-telemetry">
+    <div class="page-header">
+      <h2 class="page-heading">Node Telemetry</h2>
+      <p class="page-sub">Detailed sensor readings from all registered bin nodes.</p>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label"><i class="fa-solid fa-filter"></i> Tenant Filter</span>
+      <input class="filter-input" id="tenant-filter" placeholder="Leave empty for all tenants">
+      <button class="btn btn-ghost" id="btn-apply-filter"><i class="fa-solid fa-magnifying-glass"></i> Apply</button>
+    </div>
+    <div class="tele-grid" id="tele-grid">
+      <div class="placeholder">Loading telemetry…</div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: AI VISION ════════ -->
+  <section class="page" id="page-vision">
+    <div class="page-header">
+      <h2 class="page-heading">AI Vision Core</h2>
+      <p class="page-sub">Automated waste image classification using deep learning. Upload a sample to analyze.</p>
+    </div>
+    <div class="vision-layout">
+      <div class="card vision-upload-card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Sample</span></div>
+        <div class="card-body">
+          <div class="upload-zone" id="upload-zone">
+            <div class="uz-inner">
+              <div class="uz-icon"><i class="fa-solid fa-image"></i></div>
+              <h4>Drop image here</h4>
+              <p>or click to browse files</p>
+              <span class="uz-types">JPG, PNG, WEBP supported</span>
+            </div>
+            <input type="file" id="file-input" accept="image/*" class="hidden">
+          </div>
+          <div class="vision-preview hidden" id="v-preview">
+            <img id="v-img" src="#" alt="Preview">
+          </div>
+        </div>
+      </div>
+      <div class="card vision-result-card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-microscope"></i> Analysis Result</span></div>
+        <div class="card-body">
+          <div class="vision-idle" id="v-idle">
+            <div class="vision-idle-icon"><i class="fa-solid fa-robot"></i></div>
+            <h4>Awaiting Sample</h4>
+            <p>Upload a waste image to begin AI classification.</p>
+          </div>
+          <div class="v-result hidden" id="v-result"></div>
+        </div>
+      </div>
+      <div class="card vision-info-card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-circle-info"></i> Classification Categories</span></div>
+        <div class="card-body">
+          <div class="cat-list">
+            <div class="cat-item"><span class="cat-dot red"></span><div><b>Hazardous</b><small>Batteries, chemicals, medical waste → Specialized Disposal</small></div></div>
+            <div class="cat-item"><span class="cat-dot green"></span><div><b>Organic</b><small>Food scraps, biodegradable → Composting</small></div></div>
+            <div class="cat-item"><span class="cat-dot blue"></span><div><b>Recyclable</b><small>Clean plastic, glass, cardboard → Recycling Facility</small></div></div>
+            <div class="cat-item"><span class="cat-dot gray"></span><div><b>Non-Recyclable</b><small>Mixed waste, dirty plastics → Landfill</small></div></div>
+          </div>
+          <div class="model-status-box" id="model-status-box">
+            <i class="fa-solid fa-microchip"></i> <span id="model-status-txt">Checking model status…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ PAGE: COMMUNITY ════════ -->
+  <section class="page" id="page-community">
+    <div class="page-header">
+      <h2 class="page-heading">Citizen Complaint Hub</h2>
+      <p class="page-sub">Crowdsourced waste monitoring — submit reports and track community intelligence.</p>
+    </div>
+    <div class="community-layout">
+      <div class="card complaint-form-card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-pen-to-square"></i> File a Report</span></div>
+        <div class="card-body">
+          <form class="complaint-form" id="complaint-form">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input class="form-input" id="c-name" type="text" placeholder="Your name" required>
+            </div>
+            <div class="form-group">
+              <label>Location / Landmark</label>
+              <input class="form-input" id="c-loc" type="text" placeholder="e.g. Gandhi Chowk, Near Bus Stand" required>
+            </div>
+            <div class="form-group">
+              <label>Issue Type</label>
+              <select class="form-select" id="c-type" required>
+                <option value="" disabled selected>Select issue type…</option>
+                <option>Bin Overflow</option>
+                <option>Illegal Dumping</option>
+                <option>Foul Smell</option>
+                <option>Damaged Bin</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+              <i class="fa-solid fa-paper-plane"></i> Submit Intelligence Report
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="card complaints-list-card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-list-check"></i> Recent Reports</span>
+          <button class="btn btn-ghost" id="btn-refresh-complaints"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+        <div class="card-body no-pad">
+          <table class="ct-table" id="ct-table">
+            <thead><tr><th>#</th><th>Citizen</th><th>Location</th><th>Issue</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody><tr><td colspan="6" class="ct-empty">No reports logged yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /main-wrap -->
+
+<!-- Toast -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
