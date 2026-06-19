@@ -13,7 +13,7 @@ const char* password = "12345678";
 // ==========================
 // API CONFIG
 // ==========================
-const char* serverUrl = "http://192.168.43.134:8000/iot/update";
+const char* serverUrl = "http://10.222.172.127:8000/iot/update";
 
 // ==========================
 // PIN CONFIG

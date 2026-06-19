@@ -50,7 +50,19 @@ class WasteClassifier:
             return
         try:
             logger.info("Loading Keras model from %s", MODEL_PATH)
-            model = tf.keras.models.load_model(MODEL_PATH)
+            
+            class LegacyBatchNormalization(tf.keras.layers.BatchNormalization):
+                def __init__(self, **kwargs):
+                    kwargs.pop('renorm', None)
+                    kwargs.pop('renorm_clipping', None)
+                    kwargs.pop('renorm_momentum', None)
+                    super().__init__(**kwargs)
+            
+            model = tf.keras.models.load_model(
+                MODEL_PATH, 
+                custom_objects={'BatchNormalization': LegacyBatchNormalization}, 
+                compile=False
+            )
             device = "GPU" if tf.config.list_physical_devices("GPU") else "CPU"
             logger.info("AI engine on %s", device)
             model.predict(np.zeros((1, 224, 224, 3)), verbose=0)

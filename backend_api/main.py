@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 import csv
@@ -33,7 +34,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     iot_simulator.initialize_iot_grid()
+    
+    async def simulation_loop():
+        while True:
+            await asyncio.sleep(5)
+            try:
+                await asyncio.to_thread(iot_simulator.jitter_simulated_data)
+            except Exception as e:
+                logging.error("Simulator error: %s", e)
+
+    task = asyncio.create_task(simulation_loop())
     yield
+    task.cancel()
 
 
 app = FastAPI(title="CleanCity AI - IoT Gateway", lifespan=lifespan)

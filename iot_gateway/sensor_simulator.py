@@ -7,6 +7,7 @@ import os
 import logging
 from datetime import datetime, timedelta
 import sys
+import random
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if BASE_DIR not in sys.path:
@@ -175,7 +176,7 @@ class BinDatabaseService:
         try:
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
-            c.execute("SELECT id, fill_level, temp, gas_level, battery FROM bins")
+            c.execute("SELECT id, fill_level, temp, gas_level, battery FROM bins WHERE status != 'Real'")
             rows = c.fetchall()
             ts = datetime.now().isoformat()
             for r in rows:
